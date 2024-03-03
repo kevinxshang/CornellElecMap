@@ -28,6 +28,16 @@ map.on('load', function () {
 
   map.addLayer({
     id: 'buildings',
+
+map.on('load', function () {
+  map.addSource('cornellBuildings', {
+    type: 'geojson',
+    data: 'cugir-008163-geojson.geojson' // Adjust this path to your GeoJSON file
+  });
+
+  // Add a layer to visualize the building outlines
+  map.addLayer({
+    id: 'building-outlines',
     type: 'fill',
     source: 'cornellBuildings',
     layout: {},
