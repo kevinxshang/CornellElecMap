@@ -7,6 +7,28 @@ const map = new mapboxgl.Map({
   zoom: 15
 });
 
+// Function to generate a random color
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+// Generate a random color for each level (0 to 23)
+const levelColors = Array.from({ length: 24 }, () => getRandomColor());
+
+map.on('load', function () {
+  map.addSource('cornellBuildings', {
+    type: 'geojson',
+    data: 'cugir-008163-geojson.json',
+  });
+
+  map.addLayer({
+    id: 'buildings',
+
 map.on('load', function () {
   map.addSource('cornellBuildings', {
     type: 'geojson',
@@ -20,23 +42,14 @@ map.on('load', function () {
     source: 'cornellBuildings',
     layout: {},
     paint: {
-      // Initially set a default color; will be updated by the slider
-      'fill-color': '#0000FF', // Dark blue
-      'fill-opacity': 0.75
-    }
+      'fill-color': levelColors[0],
+      'fill-opacity': 0.75,
+    },
   });
 
-  // Update building color based on the slider
+  // Listen to the slider input
   document.getElementById('timeSlider').addEventListener('input', function () {
-    const hour = parseInt(this.value, 10);
-    const colorScale = d3.scaleLinear()
-      .domain([0, 23]) // Assuming 0 to 23 hours for simplicity
-      .range(['#0000FF', '#FFFF00']); // Dark blue to bright yellow
-
-    const newColor = colorScale(hour);
-
-    map.setPaintProperty('building-outlines', 'fill-color', newColor);
+    const level = parseInt(this.value, 10);
+    map.setPaintProperty('buildings', 'fill-color', levelColors[level]);
   });
 });
-
-
