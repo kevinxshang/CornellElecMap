@@ -6,5 +6,5 @@ Lead:
 - Kevin Shang
 
 Members:
-- Test Student
+- Thanakorn Rojanasasitornwong
 - Lillian Hwang-Geddes
