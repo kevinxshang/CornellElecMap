@@ -1,3 +1,10 @@
+
+// todo: read directly from duffield hall file
+
+print("sup")
+let duff_electricity = [942.7, 935.8, 948.8, 940.4]
+let electricity_color = '#' + Math.floor(duff_electricity[0]).toString(16)
+
 mapboxgl.accessToken = "pk.eyJ1Ijoia2V2aW54c2hhbmciLCJhIjoiY2xzb2FyeWkzMGRuZTJsbnl6enJvMzY1ZSJ9.oVhcnWifoSeqv554mrjaKg";
 
 const map = new mapboxgl.Map({
@@ -37,6 +44,7 @@ levelColors.push(last)
 let levelHexes = []
 for (let i = 0; i < 24; i++) {
   rgb = levelColors[i]
+  print(rgb[0])
   hex = "#" + rgb[0].toString(16) + rgb[1].toString(16) + rgb[2].toString(16)
   levelHexes.push(hex)
 }
@@ -62,6 +70,6 @@ map.on('load', function () {
   document.getElementById('timeSlider').addEventListener('input', function () {
     const level = parseInt(this.value, 10);
     map.setPaintProperty('buildings', 'fill-color', levelHexes[level]);
-    print("hello")
+    // map.setPaintProperty('buildings', 'fill-color', electricity_color);
   });
 });
