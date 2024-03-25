@@ -11,7 +11,7 @@ import time
 driver = webdriver.Chrome()
 driver.get("https://portal.emcs.cornell.edu/dashboard/script/portal.js?orgId=2&var-portal_group=ToniMorrisonHall&kiosk=tv&from=1676523600000&to=1677646799000")
 
-driver.implicitly_wait(.5)
+driver.implicitly_wait(60)
 
 # todo: fix this, find right label to use
 time_button = driver.find_element(by=By.XPATH, value='//button[@class="toolbar-button css-fbg4cg-toolbar-button"]')
@@ -33,8 +33,9 @@ select_data.select_by_visible_text("No aggregation (raw data)")
 
 download_button = driver.find_element(by = By.XPATH, value='//button[@class="btn btn-success"]')
 download_button.click()
+#download_button.click()
 
-driver.implicitly_wait(5)
+driver.implicitly_wait(60)
 
 # todo: choose the right timeframes and download raw data
 # need to figure out how to write in a text box in order to type in dates
