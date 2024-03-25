@@ -1,55 +1,37 @@
-mapboxgl.accessToken = "pk.eyJ1Ijoia2V2aW54c2hhbmciLCJhIjoiY2xzb2FyeWkzMGRuZTJsbnl6enJvMzY1ZSJ9.oVhcnWifoSeqv554mrjaKg";
+mapboxgl.accessToken = 'pk.eyJ1IjoicHVudGhhbmFrb3JuIiwiYSI6ImNsdTc2ZjMxMTAybmIycXFteHp0aGphZnkifQ.QLr5XN7GOEi9MONf2mygjQ';
 
+// Initialize the map
 const map = new mapboxgl.Map({
-  container: 'map',
-  style: 'mapbox://styles/mapbox/light-v10',
-  center: [-76.4735, 42.4534],
-  zoom: 15
+  container: 'map', // The ID of the container element
+  style: 'mapbox://styles/mapbox/light-v10', // The style URL
+  center: [-76.4735, 42.4534], // Starting position [lng, lat]
+  zoom: 15 // Starting zoom level
 });
 
-// Function to generate a random color
-function getRandomColor() {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
+// Assuming we have a function to convert electricity usage to a color
+function usageToColor(usage) {
+  // Define the range of your electricity usage here and return a color based on the usage
+  // This is a simple example; you might want to use a more sophisticated scale
+  if (usage < 100) return '#00ff00'; // Green for low usage
+  if (usage < 200) return '#ffff00'; // Yellow for medium
+  return '#ff0000'; // Red for high usage
 }
 
-// Generate a random color for each level (0 to 23)
-const levelColors = Array.from({ length: 24 }, () => getRandomColor());
-
 map.on('load', function () {
-  map.addSource('cornellBuildings', {
+  map.addSource('buildingData', {
     type: 'geojson',
-    data: 'cugir-008163-geojson.json',
+    data: 'cugir-008163-geojson' // Make sure this path is correct
   });
 
   map.addLayer({
-    id: 'buildings',
-
-map.on('load', function () {
-  map.addSource('cornellBuildings', {
-    type: 'geojson',
-    data: 'cugir-008163-geojson.geojson' // Adjust this path to your GeoJSON file
-  });
-
-  // Add a layer to visualize the building outlines
-  map.addLayer({
-    id: 'building-outlines',
+    id: 'electricity-usage',
     type: 'fill',
-    source: 'cornellBuildings',
+    source: 'buildingData',
     layout: {},
     paint: {
-      'fill-color': levelColors[0],
-      'fill-opacity': 0.75,
-    },
-  });
-
-  // Listen to the slider input
-  document.getElementById('timeSlider').addEventListener('input', function () {
-    const level = parseInt(this.value, 10);
-    map.setPaintProperty('buildings', 'fill-color', levelColors[level]);
+      // Use a data-driven style for the fill-color, based on the 'electricUsage' property
+      'fill-color': ['get', 'electricUsage'], // Replace 'electricUsage' with the property from your GeoJSON
+      'fill-opacity': 0.75
+    }
   });
 });
