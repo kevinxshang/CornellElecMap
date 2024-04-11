@@ -7,3 +7,4 @@ Lead:
 
 Members:
 - Thanakorn Rojanasasitornwong
+- Lillian Hwang-Geddes
