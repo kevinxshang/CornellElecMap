@@ -19,7 +19,7 @@ import os
 driver = webdriver.Chrome()
 
 # TODO: add an array of buildings instead to allow multiple
-buildings = ["DuffieldHall", "AliceCookHouse"]
+buildings = ["ADWhiteHouse", "AliceCookHouse", "AmericanIndianProgramHouse", "AnabelTaylorHall"]
 
 days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 start_year = 2023
