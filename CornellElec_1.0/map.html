@@ -10,6 +10,7 @@
 	<script src='https://www.unpkg.com/suncalc@1.9.0/suncalc.js'></script>
 	<script src="https://unpkg.com/osmtogeojson/osmtogeojson.js"></script>
 	<script src="leaflet-shadow-simulator.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 	<style>
 		body {
 			padding: 0px;
@@ -53,7 +54,7 @@
 			z-index: 1000.
 		}
 	</style>
-	<title>Shade Map Leaflet example</title>
+	<title>Cornell ElecMap</title>
 </head>
 
 <body>
@@ -65,6 +66,7 @@
 				<button id="increment">+1 hour</button>
 				<button id="play">Play</button>
 				<button id="stop">Stop</button>
+				<p id="date-display">Current Date: </p>
 				<label><input id="exposure" type="checkbox" autocomplete="off" />Full-day sun exposure</label>
 				<button>
 					<a href="https://shademap.app/about" target="_blank">Get API key</a>
@@ -106,10 +108,9 @@
 		}).addTo(map);
 		/* End Leaflet setup */
 
-
 		/* ShadeMap setup */
 		const loaderEl = document.getElementById('loader');
-		let now = new Date(1633358583454);
+		let now = new Date(Date.UTC(2023, 0, 1, 19, 0, 0));
 		const shadeMap = L.shadeMap({
 			apiKey: "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InRwcGlvdHJvd3NraUBzaGFkZW1hcC5hcHAiLCJjcmVhdGVkIjoxNjYyNDkzMDY2Nzk0LCJpYXQiOjE2NjI0OTMwNjZ9.ovCrLTYsdKFTF6TW3DuODxCaAtGQ3qhcmqj3DWcol5g",
 			date: now,
@@ -134,7 +135,7 @@
 						const response = await fetch(query)
 						const json = await response.json();
 						const geojson = osmtogeojson(json);
-						// If no building height, default to one storey of 3 meters
+						// If no building height, default to one story of 3 meters
 						geojson.features.forEach(feature => {
 							if (!feature.properties) {
 								feature.properties = {};
@@ -158,15 +159,17 @@
 		});
 		/* End ShadeMap setup */
 
+		let geoJsonLayer;
+
 		/* Additional layer setup */
 		async function addCornellBuildingsLayer() {
 			try {
-				const response = await fetch('cugir-008163-geojson_copy.json'); // Relative path from the server root
+				const response = await fetch('cugir-008163-geojson_copy.json');
 				if (!response.ok) {
 					throw new Error('Network response was not ok');
 				}
 				const data = await response.json();
-				console.log('GeoJSON data:', data); // Add this line to check GeoJSON data
+				console.log('GeoJSON data:', data);
 
 				const buildingNames = [
 					"BAILEY HALL", "BARTON HALL- CU POLICE", "BEEBE HALL", "PLANTATIONS HORTICULTURAL CTR",
@@ -210,8 +213,14 @@
 					"WEST CAMPUS", "WILLARD STRAIGHT HALL", "WILLIAM KEETON HOUSE"
 				];
 
-				const geoJsonLayer = L.geoJSON(data, {
+				geoJsonLayer = L.geoJSON(data, {
 					style: function (feature) {
+						if (feature.properties.buildingna == "BAILEY HALL") {
+							return {
+								color: getColor("BaileyHall", now),
+								fillOpacity: 0.75
+							}
+						}
 						return {
 							color: buildingNames.includes(feature.properties.buildingna) ? getRandomTransitionColor() : '#CCCCCC',
 							fillOpacity: 0.75
@@ -222,8 +231,17 @@
 				let intervalTimer;
 
 				document.getElementById('play').addEventListener('click', function () {
+					if (intervalTimer) {
+						clearInterval(intervalTimer);
+					}
 					intervalTimer = setInterval(function () {
 						geoJsonLayer.setStyle(function (feature) {
+							if (feature.properties.buildingna == "BAILEY HALL") {
+								return {
+									color: getColor("BaileyHall", now),
+									fillOpacity: 0.75
+								}
+							}
 							return {
 								color: buildingNames.includes(feature.properties.buildingna) ? getRandomTransitionColor() : '#CCCCCC',
 								fillOpacity: 0.75
@@ -236,55 +254,74 @@
 					clearInterval(intervalTimer);
 				});
 
+				let increment = document.getElementById('increment');
+
+				increment.addEventListener('click', () => {
+					now = new Date(now.getTime() + 3600000);
+					shadeMap.setDate(now);
+					updateDisplay();
+					geoJsonLayer.setStyle(function (feature) {
+						if (feature.properties.buildingna == "BAILEY HALL") {
+							return {
+								color: getColor("BaileyHall", now),
+								fillOpacity: 0.75
+							}
+						}
+						return {
+							color: buildingNames.includes(feature.properties.buildingna) ? getRandomTransitionColor() : '#CCCCCC',
+							fillOpacity: 0.75
+						};
+					});
+				}, false);
+
 			} catch (error) {
 				console.error('Error processing GeoJSON data:', error);
 			}
 		}
 
-		// Function to interpolate between two colors
-		function interpolateColor(color1, color2, factor) {
-			if (arguments.length < 3) {
-				factor = 0.5;
-			}
-			const result = color1.slice();
-			for (let i = 0; i < 3; i++) {
-				result[i] = Math.round(result[i] + factor * (color2[i] - result[i]));
-			}
-			return result;
+		let energyData = {}
+		function loadCSV(file) {
+			return new Promise((resolve, reject) => {
+				Papa.parse(file, {
+					download: true,
+					header: true,
+					complete: function(results) {
+					results.data.forEach(row => {
+							const dateString = row.slottime_GMT;
+							const date = new Date(dateString);
+
+							if (isNaN(date)) {
+								console.error('Invalid date:', dateString);
+								return;
+							}
+
+							const isoDate = date.toISOString();
+							energyData[isoDate] = parseFloat(row.value)
+						});
+						resolve();
+					},
+					error: function(error) {
+						reject(error);
+					}
+				});
+			});
 		}
 
-		// Convert hex color to RGB array
-		function hexToRgb(hex) {
-			const bigint = parseInt(hex.slice(1), 16);
-			return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+		function getColor(buildingName, date) {
+			const energy = Math.min(Math.max(energyData[date.toISOString()], 0), 200);
+			const intensity = Math.round(255 - (energy / 200) * (255 - 55));
+    		return `rgb(255, ${intensity}, 0)`;
 		}
 
-		// Convert RGB array to hex color
-		function rgbToHex(rgb) {
-			return '#' + rgb.map(x => {
-				const hex = x.toString(16);
-				return hex.length === 1 ? '0' + hex : hex;
-			}).join('');
-		}
-
-		// Function to get a random transition color between #F7F9D9 and #A9B406
-		function getRandomTransitionColor() {
-			const color1 = hexToRgb('#F7F9D9');
-			const color2 = hexToRgb('#A9B406');
-			const factor = Math.random();
-			const result = interpolateColor(color1, color2, factor);
-			return rgbToHex(result);
-		}
-
+		loadCSV('datasets/Time_15mins/Cleaned_BaileyHall.csv');
 		addCornellBuildingsLayer();
-
-
 
 		/* End additional layer setup */
 
 		/* Controls setup */
 		let intervalTimer;
-		const increment = document.getElementById('increment');
+		const dateDisplay = document.getElementById('date-display');
+		// const increment = document.getElementById('increment');
 		const decrement = document.getElementById('decrement');
 		const play = document.getElementById('play');
 		const stop = document.getElementById('stop');
@@ -292,26 +329,36 @@
 		const exposureGradientContainer = document.getElementById('exposure-gradient-container');
 		const exposureGradient = document.getElementById('exposure-gradient');
 
-		increment.addEventListener('click', () => {
-			now = new Date(now.getTime() + 3600000);
-			shadeMap.setDate(now);
-		}, false);
+		// increment.addEventListener('click', () => {
+		// 	now = new Date(now.getTime() + 3600000);
+		// 	shadeMap.setDate(now);
+		// 	updateDisplay();
+		// }, false);
 
 		decrement.addEventListener('click', () => {
 			now = new Date(now.getTime() - 3600000);
 			shadeMap.setDate(now);
+			updateDisplay();
 		}, false);
 
 		play.addEventListener('click', () => {
+			if (intervalTimer) {
+				clearInterval(intervalTimer);
+			}
 			intervalTimer = setInterval(() => {
 				now = new Date(now.getTime() + 60000);
 				shadeMap.setDate(now);
+				updateDisplay();
 			}, 100);
 		});
 
 		stop.addEventListener('click', () => {
 			clearInterval(intervalTimer);
 		})
+
+		function updateDisplay() {
+    		dateDisplay.textContent = `Current Date: ${now.toUTCString()}`;
+		}
 
 		exposure.addEventListener('click', (e) => {
 			clearInterval(intervalTimer);
@@ -347,6 +394,41 @@
 			}
 		})
 		/* End controls setup */
+
+		// Function to interpolate between two colors
+		function interpolateColor(color1, color2, factor) {
+			if (arguments.length < 3) {
+				factor = 0.5;
+			}
+			const result = color1.slice();
+			for (let i = 0; i < 3; i++) {
+				result[i] = Math.round(result[i] + factor * (color2[i] - result[i]));
+			}
+			return result;
+		}
+
+		// Convert hex color to RGB array
+		function hexToRgb(hex) {
+			const bigint = parseInt(hex.slice(1), 16);
+			return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+		}
+
+		// Convert RGB array to hex color
+		function rgbToHex(rgb) {
+			return '#' + rgb.map(x => {
+				const hex = x.toString(16);
+				return hex.length === 1 ? '0' + hex : hex;
+			}).join('');
+		}
+
+		// Function to get a random transition color between #F7F9D9 and #A9B406
+		function getRandomTransitionColor() {
+			const color1 = hexToRgb('#F7F9D9');
+			const color2 = hexToRgb('#A9B406');
+			const factor = Math.random();
+			const result = interpolateColor(color1, color2, factor);
+			return rgbToHex(result);
+		}
 
 	</script>
 </body>
